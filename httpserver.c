@@ -116,7 +116,9 @@ int main(int argc, char *argv[])
     /*
         4. Listen and send out request to queue
     */
-    queue_t *Q = queue_new(5);
+
+    queue_t *audit_queue = queue_new(5);
+    queue_t *Q = queue_new(2);
     sem_t num_of_requests;
     sem_init(&num_of_requests, 1,0);
     Sem_n_Queue* info = (Sem_n_Queue*)malloc(sizeof(Sem_n_Queue));
@@ -136,6 +138,7 @@ int main(int argc, char *argv[])
             perror("Failed to create the thead");
         }
     }
+    
     //pthread_join(t, NULL);
     /*
         6. Wait and Listen
@@ -147,14 +150,18 @@ int main(int argc, char *argv[])
         //Listen to Socket
         printf("waiting for connection\n");
         int accept_socketfd = accept(socketfd, NULL, NULL);
+        int unique_id = rand() % 1000;
         //Create new task to send to queue
         Task t = {
             .task_function = &process_request,
             .socket = accept_socketfd,
-            .logfile = audit_fd
+            .logfile = audit_fd,
+            .u_id = unique_id,
+            .audit_queue = audit_queue
         };
         //Push to queue
         queue_push(Q, &t);
+        queue_push(audit_queue, unique_id);
         printf("alerting\n");
         sem_post(&num_of_requests);
     }
