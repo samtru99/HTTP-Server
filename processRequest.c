@@ -18,7 +18,8 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <signal.h>
-void process_request(int accept_socketfd, int audit_fd, int unique_id, queue_t *audit_queue)
+#include <pthread.h>
+void process_request(int accept_socketfd, int audit_fd, int unique_id, queue_t *audit_queue, pthread_mutex_t *audit_mutex)
 {
     //Variables for the Request
     char buffer[2050] = { 0 };
@@ -210,14 +211,11 @@ void process_request(int accept_socketfd, int audit_fd, int unique_id, queue_t *
         Record the outcome in the log file
     */
 
-    int *queue_top_val;
     while(unique_id != queue_top(audit_queue)) {
         printf("waiting\n");
     };
-    //mutex lock
     audit_log(operation, status_code, &file_name, audit_fd, request_id);
-    //mutex pop
-    //mutex unlock
+    audit_queue_pop(audit_queue);
     /*
         Clear and close all memory
     */

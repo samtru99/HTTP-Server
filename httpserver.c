@@ -114,23 +114,22 @@ int main(int argc, char *argv[])
         errx(1, "invalid socket number: %s ", argv[1]);
     }
     /*
-        4. Listen and send out request to queue
+        4. Set up Queues, Semaphore and Mutex for threads to use
     */
-
     queue_t *audit_queue = queue_new(5);
     queue_t *Q = queue_new(2);
     sem_t num_of_requests;
     sem_init(&num_of_requests, 1,0);
     Sem_n_Queue* info = (Sem_n_Queue*)malloc(sizeof(Sem_n_Queue));
-    info->semaphore = num_of_requests;
+    info->semaphore = &num_of_requests;
     info->Q = Q;
+    pthread_mutex_t audit_mutex;
+    pthread_mutex_init(&audit_mutex, NULL);
     /*
         5. Set up worker threads
     */
     pthread_t t;
-    pthread_t th[threads];
-    //pthread_create(&t, NULL,&startThread, (void*)info );
-    
+    pthread_t th[threads];    
     for(int i = 0; i < 1; i++)
     {
         if(pthread_create(&th[i], NULL, &startThread, (void*)info) != 0)
@@ -138,13 +137,6 @@ int main(int argc, char *argv[])
             perror("Failed to create the thead");
         }
     }
-    
-    //pthread_join(t, NULL);
-    /*
-        6. Wait and Listen
-    */
-
-    
     while (true)
     {
         //Listen to Socket
@@ -157,12 +149,12 @@ int main(int argc, char *argv[])
             .socket = accept_socketfd,
             .logfile = audit_fd,
             .u_id = unique_id,
-            .audit_queue = audit_queue
+            .audit_queue = audit_queue,
+            .audit_mutex = &audit_mutex
         };
         //Push to queue
         queue_push(Q, &t);
         queue_push(audit_queue, unique_id);
-        printf("alerting\n");
         sem_post(&num_of_requests);
     }
     /*
