@@ -7,6 +7,7 @@
 #include <err.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <sys/file.h>
 
 int put_op(char buffer[2050], char *file_name, int savedMsgPos, int content_length,
     bool needMsgBody, int accept_socketfd, int num_of_bytes_read) {
@@ -16,6 +17,11 @@ int put_op(char buffer[2050], char *file_name, int savedMsgPos, int content_leng
         status_code = 201;
         file_fd = open(file_name, O_WRONLY | O_CREAT, 0700);
     }
+    while(flock(file_fd, LOCK_EX) == -1)
+    {
+        //wait
+    }
+
 
     if (needMsgBody == false) {
         char *message = (char *) malloc((num_of_bytes_read - savedMsgPos) * sizeof(char));
@@ -46,6 +52,6 @@ int put_op(char buffer[2050], char *file_name, int savedMsgPos, int content_leng
             59);
         return 500;
     }
-
+    flock(file_fd, LOCK_UN);
     return status_code;
 }

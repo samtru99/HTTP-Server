@@ -8,11 +8,16 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <sys/file.h>
 
 struct stat file_info;
 
 int head(char *file_name, int accepted_socket) {
     int file_fd = open(file_name, O_RDONLY);
+    while(flock(file_fd, LOCK_SH) == -1)
+    {
+        //wait
+    }
     /*
     if (errno == EACCES) 
     {
@@ -43,5 +48,14 @@ int head(char *file_name, int accepted_socket) {
     write(accepted_socket, file_byte_len, size);
     write(accepted_socket, "\r\n\r\n", 5);
     free(file_byte_len);
+    int close_fd = close(file_fd);
+
+    //Might cause issue since we aren't opening
+    if (close_fd == -1) 
+    {
+        write(accepted_socket, "HTTP/1.1 403\r\nContent-Length: 22\r\n\r\nInternal Server Error\n",59);
+        return 403;
+    }
+    flock(file_fd, LOCK_UN);
     return 200;
 }
