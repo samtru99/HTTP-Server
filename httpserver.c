@@ -29,8 +29,11 @@
 #include <signal.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <stdatomic.h>
 
 volatile sig_atomic_t exit_loop = 0;
+//atomic_int numOfWork = ATOMIC_VAR_INIT(0);
+
 //pthread_t *th;
 int SOCKETFD;
 //Function to convert user input to a port socket
@@ -90,7 +93,7 @@ int main(int argc, char *argv[])
         1. PARSE THROUGH COMMAND LINE AND COLLECT INFO
     */
     int audit_fd = 0;
-    int threads = 4;
+    int threads = 1;
     int options;
     bool close_audit = false;
     while ((options = getopt(argc, argv, "t:l:")) != -1) 
@@ -137,13 +140,14 @@ int main(int argc, char *argv[])
     info->semaphore = &num_of_requests;
     info->Q = Q;
     info->exit_cond = &exit_loop;
+    //info->numOfWork = numOfWork;
+    atomic_init(&info->numOfWork, 0);
     pthread_mutex_t audit_mutex;
     pthread_mutex_init(&audit_mutex, NULL);
-    
     /*
         5. Set up Signal Handling
     */
-   struct sigaction action;
+    struct sigaction action;
     memset(&action, 0, sizeof(struct sigaction));
     action.sa_handler = handler;
     sigaction(SIGTERM, &action, NULL);
@@ -197,6 +201,7 @@ int main(int argc, char *argv[])
         queue_push(Q, &t);
         queue_push(audit_queue, unique_id);
         sem_post(&num_of_requests);
+        atomic_fetch_add_explicit(&info->numOfWork,1,memory_order_relaxed);
         //sleep(3);
     }
 

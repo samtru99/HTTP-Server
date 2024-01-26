@@ -3,6 +3,8 @@
 #include "queue.h"
 #include <semaphore.h>
 #include <pthread.h>
+#include <signal.h>
+#include <stdatomic.h>
 
 typedef struct Task {
     void(*task_function)(int,int,int, *queue_t, *pthread_mutex_t);
@@ -16,6 +18,8 @@ typedef struct Task {
 typedef struct Sem_n_Queue {
     sem_t *semaphore;
     queue_t *Q;
+    volatile sig_atomic_t *exit_cond;
+    atomic_int numOfWork;
 } Sem_n_Queue;
 
 #endif
