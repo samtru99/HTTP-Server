@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
         1. PARSE THROUGH COMMAND LINE AND COLLECT INFO
     */
     int audit_fd = 0;
-    int threads = 1;
+    int threads = 4;
     int options;
     bool close_audit = false;
     while ((options = getopt(argc, argv, "t:l:")) != -1) 
@@ -133,9 +133,9 @@ int main(int argc, char *argv[])
         4. Set up Queues, Semaphore and Mutex for threads to use
     */
     queue_t *audit_queue = queue_new(5);
-    queue_t *Q = queue_new(2);
+    queue_t *Q = queue_new(5);
     sem_t num_of_requests;
-    sem_init(&num_of_requests, 1,0);
+    sem_init(&num_of_requests, 0,0);
     Sem_n_Queue* info = (Sem_n_Queue*)malloc(sizeof(Sem_n_Queue));
     info->semaphore = &num_of_requests;
     info->Q = Q;
@@ -160,6 +160,7 @@ int main(int argc, char *argv[])
     
     //th = malloc(threads * sizeof(pthread_t));
     pthread_t th[threads];
+
     for(int i = 0; i < threads; i++)
     {
         if(pthread_create(&th[i], NULL, &startThread, (void*)info) != 0)
@@ -187,7 +188,8 @@ int main(int argc, char *argv[])
             write(STDOUT_FILENO, "socket closed \n", 16);
             break;
         }
-        int unique_id = rand() % 1000;
+        int unique_id = rand() % 10000;
+        printf("id = %d \n", unique_id);
         //Create new task to send to queue
         Task t = {
             .task_function = &process_request,
@@ -198,14 +200,20 @@ int main(int argc, char *argv[])
             .audit_mutex = &audit_mutex
         };
         //Push to queue
-        queue_push(Q, &t);
         queue_push(audit_queue, unique_id);
+        queue_push(Q, &t);
         sem_post(&num_of_requests);
-        atomic_fetch_add_explicit(&info->numOfWork,1,memory_order_relaxed);
+        //atomic_fetch_add_explicit(&info->numOfWork,1,memory_order_relaxed);
         //sleep(3);
     }
 
+
     write(STDOUT_FILENO, "BF LOOP \n ", 11);
+    while(!queue_empty(audit_queue))
+    {
+        printf("processing remaining requests\n");
+    }
+    /*
     for(int i = 0; i < threads; i++)
     {
         write(STDOUT_FILENO, "IN LOOP \n ", 11);
@@ -216,6 +224,7 @@ int main(int argc, char *argv[])
         write(STDOUT_FILENO, "INN LOOP \n ", 11);
 
     }
+    */
     write(STDOUT_FILENO, "hello world", 12);
     /*
         let all task finish

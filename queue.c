@@ -42,35 +42,29 @@ void queue_delete(queue_t **q) {
 
 bool queue_push(queue_t *q, void *elem) 
 {
-    printf("in push\n");
     if (!q) {
         return false;
     }
     //printf("at push\n");
     pthread_mutex_lock(&q->queue_op);
     while (q->counter == q->size) {
-        printf("full \n");
         pthread_cond_wait(&q->queue_full, &q->queue_op);
     }
-
     q->buffer[q->head] = (void *) elem;
     q->head = (q->head + 1) % q->size;
     q->counter += 1;
     pthread_mutex_unlock(&q->queue_op);
     pthread_cond_signal(&q->queue_empty);
-    printf("pushed\n");
     return true;
 }
 
 bool queue_pop(queue_t *q, void **elem) {
-    printf("in pop\n");
     // (*elem) == NULL
     if (!q) {
         return false;
     }
     pthread_mutex_lock(&q->queue_op);
     while (q->counter == 0) {
-        printf("waiting\n");
         pthread_cond_wait(&q->queue_empty, &q->queue_op);
     }
     *elem = q->buffer[q->tail];
@@ -82,15 +76,55 @@ bool queue_pop(queue_t *q, void **elem) {
     return true;
 }
 
-int queue_top(queue_t *q)
+bool queue_empty(queue_t *q)
 {
-    //printf("in queue top\n");
+    bool result;
     if(!q) {
         return false;
     }
-    int val;
     pthread_mutex_lock(&q->queue_op);
-    val = q->buffer[q->tail];
+    result = q->counter == 0;
     pthread_mutex_unlock(&q->queue_op);
-    return val;
+    return result;
+}
+
+bool queue_top(queue_t *q, void **elem)
+{
+    if(!q) {
+        return false;
+    }
+    pthread_mutex_lock(&q->queue_op);
+    while (q->counter == 0) {
+        pthread_cond_wait(&q->queue_empty, &q->queue_op);
+    }
+    *elem = q->buffer[q->tail];
+    pthread_mutex_unlock(&q->queue_op);
+}
+
+bool audit_queue_pop(queue_t *q) 
+{
+    // (*elem) == NULL
+    if (!q) {
+        return false;
+    }
+    pthread_mutex_lock(&q->queue_op);
+    while (q->counter == 0) {
+        pthread_cond_wait(&q->queue_empty, &q->queue_op);
+    }
+    q->buffer[q->tail] = NULL;
+    q->tail = (q->tail + 1) % q->size;
+    q->counter -= 1;
+    pthread_mutex_unlock(&q->queue_op);
+    pthread_cond_signal(&q->queue_full);
+    return true;
+}
+
+void print_queue(queue_t *q) {
+
+    printf("head is %d \n", q->head);
+    printf("tail is at %d\n", q->tail);
+
+    for (int i = 0; i < q->size; i++) {
+        printf("[%d] = %p \n", i, q->buffer[i]);
+    }
 }

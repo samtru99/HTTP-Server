@@ -19,6 +19,7 @@
 #include <getopt.h>
 #include <signal.h>
 #include <pthread.h>
+#include <fcntl.h>
 void process_request(int accept_socketfd, int audit_fd, int unique_id, queue_t *audit_queue, pthread_mutex_t *audit_mutex)
 {
     //Variables for the Request
@@ -176,6 +177,7 @@ void process_request(int accept_socketfd, int audit_fd, int unique_id, queue_t *
     {
         if (strcmp(operation, "PUT") == 0)
         {
+            //exclusive lock
             if (content_length == -1) 
             {
                 write(accept_socketfd,"HTTP/1.1 400\r\nContent-Length: 12\r\n\r\nBad Request\n", 49);
@@ -185,6 +187,7 @@ void process_request(int accept_socketfd, int audit_fd, int unique_id, queue_t *
                 status_code = put_op(buffer, file_name, saved_Pos_for_Msg, content_length,needMsgBody, accept_socketfd, num_of_bytes_read);
                 if (status_code == 200) 
                 {
+                    write(STDOUT_FILENO, "out here\n", 10);
                     write(accept_socketfd, "HTTP/1.1 200\r\nContent-Length: 2\r\n\r\nOK\n", 38);
                 } 
                 else 
@@ -192,14 +195,19 @@ void process_request(int accept_socketfd, int audit_fd, int unique_id, queue_t *
                     write(accept_socketfd, "HTTP/1.1 201\r\nContent-Length: 7\r\nCreated\n", 41);
                 }
             }
+            //unlock
         } 
         else if (strcmp(operation, "GET") == 0) 
         {
+            //shared lock
             status_code = get(file_name, accept_socketfd);
+            //shared unlock
         } 
         else if (strcmp(operation, "HEAD") == 0) 
         {
+            //shared lock
             status_code = head(file_name, accept_socketfd);
+            //shared unlock 
             //do we still perform the audit on bad files?
         } 
         else 
@@ -210,12 +218,37 @@ void process_request(int accept_socketfd, int audit_fd, int unique_id, queue_t *
     /*
         Record the outcome in the log file
     */
+    int *queue_top_val;
+    bool myTurn = false;
+    write(STDOUT_FILENO, "BEFORE THE COND\n", 17);
+    while(!myTurn)
+    {
+        queue_top(audit_queue,&queue_top_val);
+        if(queue_top_val == unique_id)
+        {
+            write(STDOUT_FILENO, "FOUDN COND\n", 12);
+            myTurn = true;
+            break;
+        }
+    }
+    write(STDOUT_FILENO, "AFTER THE COND\n", 16);
 
-    while(unique_id != queue_top(audit_queue)) {
-        printf("waiting\n");
+    /*
+    while(unique_id != queue_top(audit_queue)) 
+    {
+        printf("waiting to log %d \n", unique_id);
+        sleep(10);
     };
+    */
+    //pthread_mutex_lock(&audit_queue);
+    //queue_pop(audit_queue, &val);
+    //fflush(STDOUT_FILENO);
+    //write(STDOUT_FILENO, "before logging \n", 17);
+    //printf("before logging\n");
     audit_log(operation, status_code, &file_name, audit_fd, request_id);
+    write(STDOUT_FILENO, "after logging \n", 16); 
     audit_queue_pop(audit_queue);
+    //pthread_mutex_unlock(&audit_queue);
     /*
         Clear and close all memory
     */
