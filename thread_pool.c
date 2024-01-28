@@ -22,22 +22,10 @@ void* startThread(void* args)
     Sem_n_Queue* info = (Sem_n_Queue*)args;
     while(!*info->exit_cond)
     {
-        if(atomic_load_explicit(&info->numOfWork, memory_order_relaxed) > 0)
-        {
-            atomic_fetch_sub_explicit(&info->numOfWork,1,memory_order_relaxed);
-            Task *task;
-            queue_pop(info->Q, &task);
-            executeTask(task);
-        }
-        /*
         sem_wait(&info->semaphore);
         Task *task;
         queue_pop(info->Q, &task);
-        executeTask(task);
-        */
-        //printf("val = %d ", *info->exit_cond);
-        
+        executeTask(task);        
     }
-    write(STDOUT_FILENO, "EXIT \n ", 8);
     pthread_exit(NULL);
 }

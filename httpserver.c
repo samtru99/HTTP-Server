@@ -59,10 +59,8 @@ uint16_t convert(char *value, int length) {
 
 void handler(int num)
 {
-    write(STDOUT_FILENO, "in function\n", 13);
     exit_loop = 1;
     close(SOCKETFD);
-    //exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char *argv[])
@@ -140,8 +138,6 @@ int main(int argc, char *argv[])
     info->semaphore = &num_of_requests;
     info->Q = Q;
     info->exit_cond = &exit_loop;
-    //info->numOfWork = numOfWork;
-    atomic_init(&info->numOfWork, 0);
     pthread_mutex_t audit_mutex;
     pthread_mutex_init(&audit_mutex, NULL);
     /*
@@ -151,14 +147,11 @@ int main(int argc, char *argv[])
     memset(&action, 0, sizeof(struct sigaction));
     action.sa_handler = handler;
     sigaction(SIGTERM, &action, NULL);
-    //sigaction(SIGINT, &action, NULL);
 
 
     /*
         6. Set up worker threads
     */
-    
-    //th = malloc(threads * sizeof(pthread_t));
     pthread_t th[threads];
 
     for(int i = 0; i < threads; i++)
@@ -174,22 +167,18 @@ int main(int argc, char *argv[])
         printf("waiting for connection\n");
         if (exit_loop) {
             close(SOCKETFD);  // Close the socket if termination is flagged
-            write(STDOUT_FILENO, "before\n", 8);
             break;
         }
         int accept_socketfd = accept(SOCKETFD, NULL, NULL);
         if (exit_loop) {
-            write(STDOUT_FILENO, "after\n", 7);
             close(SOCKETFD);  // Close the socket if termination is flagged
             break;
         }
         if (accept_socketfd == -1)
         {
-            write(STDOUT_FILENO, "socket closed \n", 16);
             break;
         }
         int unique_id = rand() % 10000;
-        printf("id = %d \n", unique_id);
         //Create new task to send to queue
         Task t = {
             .task_function = &process_request,
@@ -203,12 +192,9 @@ int main(int argc, char *argv[])
         queue_push(audit_queue, unique_id);
         queue_push(Q, &t);
         sem_post(&num_of_requests);
-        //atomic_fetch_add_explicit(&info->numOfWork,1,memory_order_relaxed);
-        //sleep(3);
     }
 
 
-    write(STDOUT_FILENO, "BF LOOP \n ", 11);
     while(!queue_empty(audit_queue))
     {
         printf("processing remaining requests\n");
@@ -224,10 +210,6 @@ int main(int argc, char *argv[])
         write(STDOUT_FILENO, "INN LOOP \n ", 11);
 
     }
-    */
-    write(STDOUT_FILENO, "hello world", 12);
-    /*
-        let all task finish
     */
 
    
