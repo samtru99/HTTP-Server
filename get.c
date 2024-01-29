@@ -15,11 +15,9 @@ struct stat file_info;
 int get(char *file_name, int accepted_socket) 
 {
     int file_fd = open(file_name, O_RDONLY);
-    while(flock(file_fd, LOCK_SH) == -1)
-    {
-        //wait
-        printf("locking\n");
-    }
+    /*
+        Error Check on file descriptor 
+    */
     if (errno == EACCES) 
     {
         write(accepted_socket, "HTTP/1.1 403\r\nContent-Length: 10\r\n\r\nForbidden\n", 47);
@@ -30,7 +28,14 @@ int get(char *file_name, int accepted_socket)
         write(accepted_socket, "HTTP/1.1 403\r\nContent-Length: 10\r\n\r\nNot Found\n", 47);
         return 404;
     }
-
+    /*
+        Wait for your turn to access on the file descriptor
+    */
+    while(flock(file_fd, LOCK_SH) == -1)
+    {
+        //wait
+        printf("locking\n");
+    }
     int status = fstat(file_fd, &file_info);
     if (status == -1) 
     {
@@ -56,7 +61,7 @@ int get(char *file_name, int accepted_socket)
     int bytes_read = read(file_fd, buffer, file_info.st_size);
     buffer[file_info.st_size + 1] = '\0';
     write(accepted_socket, buffer, bytes_read);
-
+    
     write(accepted_socket, "\n", 2);
     int close_fd = close(file_fd);
     if (close_fd == -1) 

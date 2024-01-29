@@ -14,20 +14,19 @@ struct stat file_info;
 
 int head(char *file_name, int accepted_socket) {
     int file_fd = open(file_name, O_RDONLY);
-    while(flock(file_fd, LOCK_SH) == -1)
-    {
-        //wait
-    }
-    /*
+    
     if (errno == EACCES) 
     {
         write(accepted_socket, "HTTP/1.1 403\r\nContent-Length: 10\r\n\r\nForbidden\n", 47);
         return 403;
     }
-    */
     if (file_fd == -1) {
         write(accepted_socket, "HTTP/1.1 404\r\nContent-Length: 10\r\n\r\nNot Found\n", 47);
         return 404;
+    }
+    while(flock(file_fd, LOCK_SH) == -1)
+    {
+        //wait
     }
     int status = fstat(file_fd, &file_info);
     if (status == -1) {
@@ -35,6 +34,7 @@ int head(char *file_name, int accepted_socket) {
             59);
         return 500;
     }
+
     write(accepted_socket, "HTTP/1.1 200 OK\r\nContent-Length: ", 33);
     int buf = file_info.st_size;
     int size = 0;
