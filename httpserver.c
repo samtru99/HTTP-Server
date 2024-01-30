@@ -124,7 +124,8 @@ int main(int argc, char *argv[])
     */
     //int socketfd = create_listen_socket(converted_port_num);
     SOCKETFD =  create_listen_socket(converted_port_num);
-    if (SOCKETFD < 0) {
+    if (SOCKETFD < 0) 
+    {
         errx(1, "invalid socket number: %s ", argv[1]);
     }
     /*
@@ -164,7 +165,7 @@ int main(int argc, char *argv[])
     while (!exit_loop)
     {
         //Listen to Socket
-        printf("waiting for connection\n");
+        printf("Waiting for connection...\n");
         if (exit_loop) {
             close(SOCKETFD);  // Close the socket if termination is flagged
             break;
@@ -197,8 +198,10 @@ int main(int argc, char *argv[])
 
     while(!queue_empty(audit_queue))
     {
-        printf("processing remaining requests\n");
+
     }
+    write(STDOUT_FILENO, "SERVER POWERING DOWN\n", 22);
+    
     /*
     for(int i = 0; i < threads; i++)
     {
@@ -208,10 +211,19 @@ int main(int argc, char *argv[])
             perror("Failed to join the thread");
         }
         write(STDOUT_FILENO, "INN LOOP \n ", 11);
-
     }
     */
-
-   
+   /*
+        7. Clean up Memory 
+   */
+    write(STDOUT_FILENO, "stuck in delete\n", 17);
+    queue_delete(&Q);
+    write(STDOUT_FILENO, "a\n", 3);
+    queue_delete(&audit_queue);
+    write(STDOUT_FILENO, "b\n", 3);    
+    sem_destroy(&num_of_requests);
+    write(STDOUT_FILENO, "c\n", 3);
+    free(info);
+    write(STDOUT_FILENO, "Memory Cleanup Complete\n", 25);
     return 0;
 }
