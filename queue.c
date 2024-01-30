@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 typedef struct queue {
     pthread_mutex_t queue_op;
@@ -28,8 +29,11 @@ queue_t *queue_new(int size) {
     return Q;
 }
 
-void queue_delete(queue_t **q) {
-    if ((*q) == NULL) {
+void queue_delete(queue_t **q) 
+{
+
+    if ((*q) == NULL) 
+    {
         return;
     }
     pthread_mutex_destroy(&(*q)->queue_op);

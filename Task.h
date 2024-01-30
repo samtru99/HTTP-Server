@@ -16,7 +16,8 @@ typedef struct Task {
 }Task;
 
 typedef struct Sem_n_Queue {
-    sem_t *semaphore;
+    //sem_t *semaphore; original
+    sem_t semaphore;
     queue_t *Q;
     volatile sig_atomic_t *exit_cond;
     atomic_int numOfWork;

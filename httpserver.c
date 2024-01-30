@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
         1. PARSE THROUGH COMMAND LINE AND COLLECT INFO
     */
     int audit_fd = 0;
-    int threads = 4;
+    int threads = 1;
     int options;
     bool close_audit = false;
     while ((options = getopt(argc, argv, "t:l:")) != -1) 
@@ -133,10 +133,11 @@ int main(int argc, char *argv[])
     */
     queue_t *audit_queue = queue_new(5);
     queue_t *Q = queue_new(5);
-    sem_t num_of_requests;
-    sem_init(&num_of_requests, 0,0);
+    //sem_t num_of_requests;
+    //sem_init(&num_of_requests, 0,0);
     Sem_n_Queue* info = (Sem_n_Queue*)malloc(sizeof(Sem_n_Queue));
-    info->semaphore = &num_of_requests;
+    sem_init(&info->semaphore,0,0);
+    //info->semaphore = &num_of_requests;
     info->Q = Q;
     info->exit_cond = &exit_loop;
     pthread_mutex_t audit_mutex;
@@ -192,7 +193,7 @@ int main(int argc, char *argv[])
         //Push to queue
         queue_push(audit_queue, unique_id);
         queue_push(Q, &t);
-        sem_post(&num_of_requests);
+        sem_post(&info->semaphore);
     }
 
 
@@ -216,14 +217,9 @@ int main(int argc, char *argv[])
    /*
         7. Clean up Memory 
    */
-    write(STDOUT_FILENO, "stuck in delete\n", 17);
     queue_delete(&Q);
-    write(STDOUT_FILENO, "a\n", 3);
     queue_delete(&audit_queue);
-    write(STDOUT_FILENO, "b\n", 3);    
-    sem_destroy(&num_of_requests);
-    write(STDOUT_FILENO, "c\n", 3);
+    sem_destroy(&info->semaphore);
     free(info);
-    write(STDOUT_FILENO, "Memory Cleanup Complete\n", 25);
     return 0;
 }
